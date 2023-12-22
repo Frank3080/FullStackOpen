@@ -1,16 +1,15 @@
 import React from "react";
 
-const Persons = ({ persons, numbers, search }) => {
+const Persons = ({ persons, search }) => {
   return (
     <div>
       {persons
         .filter((person) =>
           person.name.toLowerCase().includes(search.toLowerCase())
         )
-        .map((person, index) => (
-          <p key={index}>
-            {person.name}
-            {numbers[index] && ` - ${numbers[index].number}`}
+        .map((person) => (
+          <p key={person.id}>
+            {person.name} {person.number}
           </p>
         ))}
     </div>

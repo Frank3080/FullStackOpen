@@ -2,13 +2,20 @@ import { useState } from "react";
 import Persons from "./components/Persons";
 import PersonForm from "./components/PersonForm";
 import Filter from "./components/Filter";
+import { useEffect } from "react";
+import axios from "axios";
 
 const App = () => {
-  const [persons, setPersons] = useState([{ name: "Arto Hellas" }]);
+  const [persons, setPersons] = useState([]);
   const [newName, setNewName] = useState("");
-  const [numbers, setNumbers] = useState([{ number: "1234-1234-1232" }]);
   const [newNumber, setNewNumber] = useState("");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    axios.get("http://localhost:3001/persons").then((response) => {
+      setPersons(response.data);
+    });
+  }, []);
 
   const addName = (event) => {
     event.preventDefault();
@@ -31,7 +38,7 @@ const App = () => {
   const addNumber = (event) => {
     event.preventDefault();
 
-    if (numbers.some((number) => number.name === newNumber)) {
+    if (numbers.some((entry) => entry.number === newNumber)) {
       alert(`${newNumber} is already added to phonebook`);
       return;
     }
@@ -43,7 +50,7 @@ const App = () => {
     };
 
     setNumbers(numbers.concat(numberObject));
-    setNewNumber("");
+    setNewNumber(""); //
   };
 
   const handleNewName = (event) => {
@@ -57,13 +64,27 @@ const App = () => {
   };
 
   const handleSubmit = (event) => {
-    if (newName === "" || newNumber === "") {
+    if (!newName || !newNumber) {
       alert("You have to fill out both forms");
       return;
     }
 
-    addName(event);
-    addNumber(event);
+    if (persons.some((person) => person.name === newName)) {
+      alert(`${newName} is already added to the phonebook`);
+      return;
+    }
+
+    const newPerson = {
+      name: newName,
+      number: newNumber,
+      id: persons.length + 1,
+    };
+
+    axios.post("http://localhost:3001/persons", newPerson).then((response) => {
+      setPersons(persons.concat(response.data));
+      setNewName("");
+      setNewNumber("");
+    });
   };
 
   const handleSearchChange = (event) => {
@@ -83,7 +104,7 @@ const App = () => {
         newNumber={newNumber}
       />
       <h3>Numbers</h3>
-      <Persons persons={persons} numbers={numbers} search={search} />
+      <Persons persons={persons} search={search} />
     </div>
   );
 };
