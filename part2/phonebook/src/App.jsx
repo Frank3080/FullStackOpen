@@ -4,6 +4,7 @@ import PersonForm from "./components/PersonForm";
 import Filter from "./components/Filter";
 import { useEffect } from "react";
 import axios from "axios";
+import personServices from "./services/personServices";
 
 const App = () => {
   const [persons, setPersons] = useState([]);
@@ -12,46 +13,10 @@ const App = () => {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    axios.get("http://localhost:3001/persons").then((response) => {
-      setPersons(response.data);
+    personServices.getAll().then((initialPersons) => {
+      setPersons(initialPersons);
     });
   }, []);
-
-  const addName = (event) => {
-    event.preventDefault();
-
-    if (persons.some((person) => person.name === newName)) {
-      alert(`${newName} is already added to phonebook`);
-      return;
-    }
-
-    const nameObject = {
-      name: newName,
-      date: new Date().toISOString(),
-      id: persons.length + 1,
-    };
-
-    setPersons(persons.concat(nameObject));
-    setNewName("");
-  };
-
-  const addNumber = (event) => {
-    event.preventDefault();
-
-    if (numbers.some((entry) => entry.number === newNumber)) {
-      alert(`${newNumber} is already added to phonebook`);
-      return;
-    }
-
-    const numberObject = {
-      number: newNumber,
-      date: new Date().toISOString(),
-      id: numbers.length + 1,
-    };
-
-    setNumbers(numbers.concat(numberObject));
-    setNewNumber(""); //
-  };
 
   const handleNewName = (event) => {
     console.log(event.target.value);
@@ -64,14 +29,36 @@ const App = () => {
   };
 
   const handleSubmit = (event) => {
+    const existingPerson = persons.find((person) => person.name === newName);
+
     if (!newName || !newNumber) {
       alert("You have to fill out both forms");
       return;
     }
 
-    if (persons.some((person) => person.name === newName)) {
-      alert(`${newName} is already added to the phonebook`);
-      return;
+    if (existingPerson) {
+      if (
+        window.confirm(
+          `${newName} is already added to phonebook, replace the old number with a new one?`
+        )
+      ) {
+        const updatedPerson = {
+          ...existingPerson,
+          number: newNumber,
+        };
+
+        personServices
+          .updatePerson(existingPerson.id, updatedPerson)
+          .then((response) => {
+            setPersons(
+              persons.map((person) => {
+                person.id === existingPerson.id ? response : person;
+              })
+            );
+            setNewName("");
+            setNewNumber("");
+          });
+      }
     }
 
     const newPerson = {
@@ -80,8 +67,8 @@ const App = () => {
       id: persons.length + 1,
     };
 
-    axios.post("http://localhost:3001/persons", newPerson).then((response) => {
-      setPersons(persons.concat(response.data));
+    personServices.create(newPerson).then((response) => {
+      setPersons(persons.concat(response));
       setNewName("");
       setNewNumber("");
     });
@@ -89,6 +76,15 @@ const App = () => {
 
   const handleSearchChange = (event) => {
     setSearch(event.target.value);
+  };
+
+  const handleDelete = (id) => {
+    const personToDelete = persons.find((person) => person.id === id);
+    if (window.confirm(`Do you want to delete ${personToDelete.name}`)) {
+      personServices.deletePerson(id).then(() => {
+        setPersons(persons.filter((person) => person.id != id));
+      });
+    }
   };
 
   return (
@@ -104,7 +100,7 @@ const App = () => {
         newNumber={newNumber}
       />
       <h3>Numbers</h3>
-      <Persons persons={persons} search={search} />
+      <Persons persons={persons} search={search} onDelete={handleDelete} />
     </div>
   );
 };
