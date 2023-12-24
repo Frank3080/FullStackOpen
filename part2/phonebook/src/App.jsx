@@ -5,12 +5,16 @@ import Filter from "./components/Filter";
 import { useEffect } from "react";
 import axios from "axios";
 import personServices from "./services/personServices";
+import "./index.css";
+import CustomNotification from "./components/Notification";
 
 const App = () => {
   const [persons, setPersons] = useState([]);
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
   const [search, setSearch] = useState("");
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     personServices.getAll().then((initialPersons) => {
@@ -57,21 +61,32 @@ const App = () => {
             );
             setNewName("");
             setNewNumber("");
+            setSuccessMessage(`Added ${updatedPerson.name}`);
+            setTimeout(() => {
+              setSuccessMessage(null);
+            }, 3000);
           });
       }
     }
 
-    const newPerson = {
-      name: newName,
-      number: newNumber,
-      id: persons.length + 1,
-    };
-
-    personServices.create(newPerson).then((response) => {
-      setPersons(persons.concat(response));
-      setNewName("");
-      setNewNumber("");
-    });
+    const newPerson = { name: newName, number: newNumber };
+    personServices
+      .create(newPerson)
+      .then((updatedPerson) => {
+        setPersons(persons.concat(updatedPerson));
+        setSuccessMessage(`Added ${updatedPerson.name}`);
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+        setNewName("");
+        setNewNumber("");
+      })
+      .catch((err) => {
+        setErrorMessage(err.response.data.error);
+        setTimeout(() => {
+          setErrorMessage(null);
+        }, 5000);
+      });
   };
 
   const handleSearchChange = (event) => {
@@ -82,7 +97,13 @@ const App = () => {
     const personToDelete = persons.find((person) => person.id === id);
     if (window.confirm(`Do you want to delete ${personToDelete.name}`)) {
       personServices.deletePerson(id).then(() => {
+        setSuccessMessage(
+          `Deleted ${persons.find((person) => person.id === id).name}`
+        );
         setPersons(persons.filter((person) => person.id != id));
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
       });
     }
   };
@@ -90,6 +111,10 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <CustomNotification
+        successMessage={successMessage}
+        errorMessage={errorMessage}
+      />
       <Filter search={search} onSearchChange={handleSearchChange} />
       <h3>Add a new</h3>
       <PersonForm
